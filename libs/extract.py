@@ -1,3 +1,4 @@
+#Found here: https://github.com/Arturus/kaggle-web-traffic/blob/master/extractor.py
 
 import re
 import pandas as pd
@@ -10,7 +11,6 @@ pat = re.compile(
 # Debug output to ensure pattern still works
 # print(pat.fullmatch('BLEACH_zh.wikipedia.org_all-accessspider').groups())
 # print(pat.fullmatch('Accueil_commons.wikimedia.org_all-access_spider').groups())
-
 
 def extract_url(source) -> pd.DataFrame:
     """
