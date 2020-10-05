@@ -68,12 +68,21 @@ def extract_url(source) -> pd.DataFrame:
         'Page': source
     })
 
+def shift_visitors(data, shift):
+    data['Visitors_shift_' + str(shift)] = 0
+    for page in data['Page'].unique():
+        df = data.loc[data['Page'] == page]
+        data.loc[data['Page'] == page, 'Visitors_shift_' + str(shift)] = df['Visitors'].shift(shift)
+    return(data)
+
 def prepareDataXGBoost(df,lag, encoding = 'oneHotEncoding'):
     df = df.fillna(0)
     df_extract = extract_url(df['Page'])
     df = df.set_index('Page')
     df = df.T.rename_axis('Dates')
     df_lag = calculateLag(df,lag).reset_index()
+    df_lag = shift_visitors(df_lag,7)
+    df_lag = shift_visitors(df_lag,90)
     df_prepared= df_lag.set_index('Page').join(df_extract.set_index('Page'))
     df_prepared = df_prepared.reset_index().set_index(['Dates','Page']).sort_index()
     df_prepared = df_prepared.drop(['term', 'marker'], axis = 1)

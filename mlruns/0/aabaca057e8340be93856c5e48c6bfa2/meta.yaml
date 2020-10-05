@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/hugotodeschini/Documents/Benchmark%20forecasting%20model/ArtefactBenchmarkForecastingModel/mlruns/0/aabaca057e8340be93856c5e48c6bfa2/artifacts
+end_time: 1600810351279
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: deleted
+name: ''
+run_id: aabaca057e8340be93856c5e48c6bfa2
+run_uuid: aabaca057e8340be93856c5e48c6bfa2
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1600810351100
+status: 3
+tags: []
+user_id: hugotodeschini
