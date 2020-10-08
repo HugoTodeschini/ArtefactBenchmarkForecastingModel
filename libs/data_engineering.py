@@ -1,6 +1,7 @@
 import re
 import pandas as pd
 import numpy as np
+import time
 
 def calculateLag(df,lag):
     df_lag = pd.DataFrame()
@@ -75,17 +76,34 @@ def shift_visitors(data, shift):
         data.loc[data['Page'] == page, 'Visitors_shift_' + str(shift)] = df['Visitors'].shift(shift)
     return(data)
 
+def shift_visitors_fast(data, shift):
+    nan_Dates = data['Dates'][0:shift]
+    data['Visitors_shift_' + str(shift)] = data['Visitors'].shift(shift)
+    data.loc[data['Dates'].isin(nan_Dates), 'Visitors_shift_' + str(shift)] = np.nan
+    return(data)
+
 def prepareDataXGBoost(df,lag, encoding = 'oneHotEncoding'):
+    tps1 = time.clock()
     df = df.fillna(0)
     df_extract = extract_url(df['Page'])
+    tps2 = time.clock()
+    print("Temps d'exécution de la fonction extract:" + str(tps2-tps1) + " secondes")
     df = df.set_index('Page')
     df = df.T.rename_axis('Dates')
+    tps3 = time.clock()
+    print("Temps d'exécution de la réorganisation des colonnes" + str(tps3-tps2) + " secondes")
     df_lag = calculateLag(df,lag).reset_index()
-    df_lag = shift_visitors(df_lag,7)
-    df_lag = shift_visitors(df_lag,90)
+    tps4= time.clock()
+    print("Temps d'exécution du calcul du lag:" + str(tps4-tps3) + " secondes")
+    df_lag = shift_visitors_fast(df_lag,7)
+    df_lag = shift_visitors_fast(df_lag,90)
+    tps5 = time.clock()
+    print("Temps d'exécution du calcul du shift:" + str(tps5-tps4) + " secondes")
     df_prepared= df_lag.set_index('Page').join(df_extract.set_index('Page'))
     df_prepared = df_prepared.reset_index().set_index(['Dates','Page']).sort_index()
     df_prepared = df_prepared.drop(['term', 'marker'], axis = 1)
+    tps6 = time.clock()
+    print("Temps d'exécution du changement d'index:" + str(tps6-tps5) + " secondes")
     if  encoding == 'oneHotEncoding':
         df_prepared = pd.get_dummies(df_prepared)
     elif encoding == 'label':
@@ -94,8 +112,8 @@ def prepareDataXGBoost(df,lag, encoding = 'oneHotEncoding'):
         df_prepared['agent'] = df_prepared['agent'].cat.codes
         df_prepared['site'] = df_prepared['site'].cat.codes
         df_prepared['country'] = df_prepared['country'].cat.codes
-        #df_prepared['term'] = df_prepared['term'].cat.codes
-        #df_prepared['marker'] = df_prepared['marker'].cat.codes
     else:
         print("Bad encoding")
+    tps7 = time.clock()
+    print("Temps d'exécution de l'encoding:" + str(tps7-tps6) + " secondes")
     return df_prepared
