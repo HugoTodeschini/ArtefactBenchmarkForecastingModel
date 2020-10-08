@@ -1,22 +1,6 @@
 import re
 import pandas as pd
 import numpy as np
-import time
-
-def calculateLag(df,lag):
-    df_lag = pd.DataFrame()
-    for column in df.columns:
-        df_column = pd.DataFrame(df[column])
-        for i in range(lag):
-            df_column['diff' + str(i+1)] = 0
-            df_column['diff' + str(i+1)] = df_column[column].diff(i+1)
-        
-        df_column['Page'] = column
-        df_column['Visitors'] = df_column[column]
-        df_column = df_column.drop([column],axis= 1)
-        df_lag.append(df_column)
-        df_lag = pd.concat([df_lag, df_column], ignore_index=False)
-    return(df_lag)
 
 #Found here: https://github.com/Arturus/kaggle-web-traffic/blob/master/extractor.py
 
@@ -70,40 +54,27 @@ def extract_url(source) -> pd.DataFrame:
     })
 
 def shift_visitors(data, shift):
-    data['Visitors_shift_' + str(shift)] = 0
-    for page in data['Page'].unique():
-        df = data.loc[data['Page'] == page]
-        data.loc[data['Page'] == page, 'Visitors_shift_' + str(shift)] = df['Visitors'].shift(shift)
-    return(data)
-
-def shift_visitors_fast(data, shift):
     nan_Dates = data['Dates'][0:shift]
     data['Visitors_shift_' + str(shift)] = data['Visitors'].shift(shift)
     data.loc[data['Dates'].isin(nan_Dates), 'Visitors_shift_' + str(shift)] = np.nan
     return(data)
 
-def prepareDataXGBoost(df,lag, encoding = 'oneHotEncoding'):
-    tps1 = time.clock()
+def prepareDataXGBoost(df, encoding = 'oneHotEncoding'):
     df = df.fillna(0)
     df_extract = extract_url(df['Page'])
-    tps2 = time.clock()
-    print("Temps d'exécution de la fonction extract:" + str(tps2-tps1) + " secondes")
     df = df.set_index('Page')
     df = df.T.rename_axis('Dates')
-    tps3 = time.clock()
-    print("Temps d'exécution de la réorganisation des colonnes" + str(tps3-tps2) + " secondes")
-    df_lag = calculateLag(df,lag).reset_index()
-    tps4= time.clock()
-    print("Temps d'exécution du calcul du lag:" + str(tps4-tps3) + " secondes")
-    df_lag = shift_visitors_fast(df_lag,7)
-    df_lag = shift_visitors_fast(df_lag,90)
-    tps5 = time.clock()
-    print("Temps d'exécution du calcul du shift:" + str(tps5-tps4) + " secondes")
-    df_prepared= df_lag.set_index('Page').join(df_extract.set_index('Page'))
-    df_prepared = df_prepared.reset_index().set_index(['Dates','Page']).sort_index()
+    
+    df_shift  = pd.DataFrame(df.stack()).reset_index().rename(columns = {0: 'Visitors'})
+    df_shift = df_shift.sort_values(by=['Page','Dates'])
+    
+    for i in [1,2,3,4,5,6,7,90]:
+        df_shift = shift_visitors(df_shift,i)
+
+    df_prepared= df_shift.set_index('Page').join(df_extract.set_index('Page'))
+    df_prepared = df_prepared.reset_index().set_index(['Page','Dates']).sort_index()
     df_prepared = df_prepared.drop(['term', 'marker'], axis = 1)
-    tps6 = time.clock()
-    print("Temps d'exécution du changement d'index:" + str(tps6-tps5) + " secondes")
+ 
     if  encoding == 'oneHotEncoding':
         df_prepared = pd.get_dummies(df_prepared)
     elif encoding == 'label':
@@ -114,6 +85,5 @@ def prepareDataXGBoost(df,lag, encoding = 'oneHotEncoding'):
         df_prepared['country'] = df_prepared['country'].cat.codes
     else:
         print("Bad encoding")
-    tps7 = time.clock()
-    print("Temps d'exécution de l'encoding:" + str(tps7-tps6) + " secondes")
+
     return df_prepared
