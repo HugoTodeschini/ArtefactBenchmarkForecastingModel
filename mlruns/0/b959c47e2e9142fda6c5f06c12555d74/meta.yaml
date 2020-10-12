@@ -2,7 +2,7 @@ artifact_uri: file:///Users/hugotodeschini/Documents/Benchmark%20forecasting%20m
 end_time: 1600810463896
 entry_point_name: ''
 experiment_id: '0'
-lifecycle_stage: active
+lifecycle_stage: deleted
 name: ''
 run_id: b959c47e2e9142fda6c5f06c12555d74
 run_uuid: b959c47e2e9142fda6c5f06c12555d74
